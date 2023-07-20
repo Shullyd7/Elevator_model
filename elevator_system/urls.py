@@ -19,11 +19,22 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from elevators.views import ElevatorViewSet
 
+
+
 router = DefaultRouter()
 router.register(r'elevators', ElevatorViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include(router.urls)),
+    path('elevators/<int:pk>/requests/', ElevatorViewSet.as_view({'get': 'get_requests', 'post': 'save_user_request'}), name='elevator-requests'),
+    path('elevators/<int:pk>/destination/', ElevatorViewSet.as_view({'get': 'get_next_destination_floor'}), name='elevator-destination'),
+    path('elevators/<int:pk>/is_moving/', ElevatorViewSet.as_view({'get': 'is_moving_up_down'}), name='elevator-moving-status'),
+    path('elevators/<int:pk>/maintenance/', ElevatorViewSet.as_view({'put': 'mark_maintenance'}), name='elevator-maintenance'),
+    path('elevators/<int:pk>/door/open/', ElevatorViewSet.as_view({'put': 'open_door'}), name='elevator-door-open'),
+    path('elevators/<int:pk>/door/close/', ElevatorViewSet.as_view({'put': 'close_door'}), name='elevator-door-close'),
+    path('elevators/<int:pk>/requests/clear/', ElevatorViewSet.as_view({'post': 'clear_user_requests'}), name='elevator-requests-clear'),
+
 ]
+
 
