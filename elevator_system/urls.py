@@ -28,6 +28,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include(router.urls)),
     path('elevators/<int:pk>/requests/', ElevatorViewSet.as_view({'get': 'get_requests', 'post': 'save_user_request'}), name='elevator-requests'),
+    path('num_elevators/', ElevatorViewSet.as_view({'get': 'get_num_elevators'}), name='num-elevators'),
+    path('clear_elevators/', ElevatorViewSet.as_view({'post': 'clear_elevators'}), name='clear-elevators'),
     path('elevators/<int:pk>/destination/', ElevatorViewSet.as_view({'get': 'get_next_destination_floor'}), name='elevator-destination'),
     path('elevators/<int:pk>/is_moving/', ElevatorViewSet.as_view({'get': 'is_moving_up_down'}), name='elevator-moving-status'),
     path('elevators/<int:pk>/maintenance/', ElevatorViewSet.as_view({'put': 'mark_maintenance'}), name='elevator-maintenance'),

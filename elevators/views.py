@@ -1,7 +1,7 @@
-from django.shortcuts import render
+from django.db import connection
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from .models import Elevator
+from .models import Elevator, ElevatorRequest
 from .serializers import ElevatorSerializer, ElevatorRequestSerializer
 
 
@@ -14,14 +14,32 @@ class ElevatorViewSet(viewsets.ModelViewSet):
     # API to initialize the elevator system with 'n' elevators
     def create(self, request, *args, **kwargs):
         num_elevators = request.data.get('num_elevators', 1)
-        elevator_ids = []  # List to store the IDs of created elevators
-
         for _ in range(num_elevators):
-            elevator = Elevator.objects.create()
-            elevator_ids.append(elevator.id)
+            Elevator.objects.create()
+        return Response({'detail': f'{num_elevators} elevators created successfully.'}, status=status.HTTP_201_CREATED)
 
-        return Response({'detail': f'{num_elevators} elevators created successfully.', 'elevator_ids': elevator_ids},
-                        status=status.HTTP_201_CREATED)
+    # API to fetch the number of elevators in the system
+    def get_num_elevators(self, request):
+        elevators = self.queryset
+        num_elevators = elevators.count()
+        elevator_ids = [elevator.id for elevator in elevators]
+        return Response({'num_elevators': num_elevators, 'elevator_ids': elevator_ids}, status=status.HTTP_200_OK)
+
+    # API to clear all initialized elevators from the system
+    def clear_elevators(self, request):
+        # Delete all associated ElevatorRequest objects first
+        ElevatorRequest.objects.all().delete()
+
+        # Clear all elevators from the database
+        self.queryset.delete()
+
+        # Manually reset the primary key sequence for Elevator model
+        table_name = Elevator._meta.db_table
+        with connection.cursor() as cursor:
+            cursor.execute(f"DELETE FROM SQLITE_SEQUENCE WHERE NAME='{table_name}'")
+            cursor.execute(f"INSERT INTO SQLITE_SEQUENCE (NAME, SEQ) VALUES ('{table_name}', 0)")
+
+        return Response({'detail': 'All initialized elevators have been cleared.'}, status=status.HTTP_200_OK)
 
     # API to fetch all requests for a given elevator
     def get_requests(self, request, pk=None):
@@ -46,12 +64,6 @@ class ElevatorViewSet(viewsets.ModelViewSet):
     # API to save a user request to the list of requests for an elevator
     def save_user_request(self, request, pk=None):
         floor = request.data.get('floor')
-        elevator_id = int(pk)  # Convert the pk to an integer
-
-        # Check if the requested elevator ID is within the range of initialized elevators
-        if not (1 <= elevator_id <= Elevator.objects.count()):
-            return Response({'detail': f'Elevator with ID {elevator_id} does not exist.'},
-                            status=status.HTTP_404_NOT_FOUND)
 
         # Find the optimal elevator based on user request
         elevators = Elevator.objects.filter(is_operational=True)
@@ -60,15 +72,23 @@ class ElevatorViewSet(viewsets.ModelViewSet):
 
         for elevator in elevators:
             distance = elevator.distance_from_floor(floor)
-            if distance < min_distance:
-                min_distance = distance
-                optimal_elevator = elevator
+            if elevator.is_moving_up() and floor >= elevator.floor:
+                if distance < min_distance:
+                    min_distance = distance
+                    optimal_elevator = elevator
+            elif elevator.is_moving_down() and floor <= elevator.floor:
+                if distance < min_distance:
+                    min_distance = distance
+                    optimal_elevator = elevator
+            elif not elevator.is_moving:
+                if distance < min_distance:
+                    min_distance = distance
+                    optimal_elevator = elevator
 
         if optimal_elevator:
             optimal_elevator.add_request(floor)
             optimal_elevator.save()  # Save the updated elevator status to the database
-            return Response({'detail': f'Request added to elevator {optimal_elevator.id}.'},
-                            status=status.HTTP_200_OK)
+            return Response({'detail': f'Request added to elevator {optimal_elevator.id}.'}, status=status.HTTP_200_OK)
         else:
             return Response({'detail': 'No operational elevator available at the moment.'},
                             status=status.HTTP_400_BAD_REQUEST)
