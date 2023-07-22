@@ -36,7 +36,6 @@ urlpatterns = [
     path('elevators/<int:pk>/door/open/', ElevatorViewSet.as_view({'put': 'open_door'}), name='elevator-door-open'),
     path('elevators/<int:pk>/door/close/', ElevatorViewSet.as_view({'put': 'close_door'}), name='elevator-door-close'),
     path('elevators/<int:pk>/requests/clear/', ElevatorViewSet.as_view({'post': 'clear_user_requests'}), name='elevator-requests-clear'),
-
 ]
 
 
