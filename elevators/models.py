@@ -21,6 +21,12 @@ class Elevator(models.Model):
                 return requests_below.first().floor if requests_below.exists() else None
         return None
 
+    @property
+    def next_floor(self):
+        if self.requests.exists():
+            return self.requests.first().floor
+        return None
+
     def is_moving_up(self):
         return self.is_moving and self.direction == 'UP'
 

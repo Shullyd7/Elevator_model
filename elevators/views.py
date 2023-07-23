@@ -51,7 +51,7 @@ class ElevatorViewSet(viewsets.ModelViewSet):
     # API to fetch the next destination floor for a given elevator
     def get_next_destination_floor(self, request, pk=None):
         elevator = self.get_object()
-        next_destination = elevator.get_next_destination()
+        next_destination = elevator.next_floor
         return Response({'next_destination': next_destination})
 
     # API to fetch if the elevator is moving up or down currently
